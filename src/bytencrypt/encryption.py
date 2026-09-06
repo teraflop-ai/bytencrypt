@@ -1,3 +1,4 @@
+import contextlib
 import os
 
 import nacl.pwhash
@@ -28,11 +29,28 @@ class FileCrypt:
     def _aad(i, last):
         return i.to_bytes(8, "big") + bytes([last])
 
+    @staticmethod
+    @contextlib.contextmanager
+    def _atomic(out):
+        tmp = out + ".part"
+        try:
+            with open(tmp, "wb") as o:
+                yield o
+                o.flush()
+                os.fsync(o.fileno())
+            os.replace(tmp, out)
+        except BaseException:
+            if os.path.exists(tmp):
+                os.remove(tmp)
+            raise
+
     def encrypt(self, path, out=None, remove=True):
         out = out or path + ".enc"
+        if out == path:
+            raise ValueError(f"{path}: out == path")
         salt = nacl.utils.random(self.KDF.SALTBYTES)
         aead = self._aead(salt)
-        with open(path, "rb") as f, open(out, "wb") as o:
+        with open(path, "rb") as f, self._atomic(out) as o:
             o.write(salt)
             i, last = 0, False
             while not last:
@@ -46,7 +64,9 @@ class FileCrypt:
 
     def decrypt(self, path, out=None, remove=True):
         out = out or path.removesuffix(".enc")
-        with open(path, "rb") as f, open(out, "wb") as o:
+        if out == path:
+            raise ValueError(f"{path}: not a .enc file")
+        with open(path, "rb") as f, self._atomic(out) as o:
             aead = self._aead(f.read(self.KDF.SALTBYTES))
             i, last = 0, False
             while not last:

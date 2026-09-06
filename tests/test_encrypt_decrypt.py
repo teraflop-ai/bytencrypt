@@ -1,4 +1,4 @@
-from encryption import FileCrypt
+from bytencrypt.encryption import FileCrypt
 
 fc = FileCrypt("password")
 fc.encrypt("tests/2505.09388v1.pdf")

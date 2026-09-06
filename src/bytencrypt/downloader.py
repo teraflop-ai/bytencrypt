@@ -2,8 +2,8 @@ import getpass
 import os
 import tempfile
 
-from encryption import FileCrypt
-from torrent import Torrent
+from bytencrypt.encryption import FileCrypt
+from bytencrypt.torrent import Torrent
 
 
 class Downloader:
